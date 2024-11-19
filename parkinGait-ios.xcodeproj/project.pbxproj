@@ -6,6 +6,14 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		2254AA592CEC616C00758518 /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 2254AA582CEC616C00758518 /* FirebaseAuth */; };
+		2254AA5B2CEC616C00758518 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 2254AA5A2CEC616C00758518 /* FirebaseCore */; };
+		2254AA5D2CEC616C00758518 /* FirebaseDatabase in Frameworks */ = {isa = PBXBuildFile; productRef = 2254AA5C2CEC616C00758518 /* FirebaseDatabase */; };
+		2254AA5F2CEC616C00758518 /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 2254AA5E2CEC616C00758518 /* FirebaseFirestore */; };
+		2254AA612CEC616C00758518 /* FirebaseStorage in Frameworks */ = {isa = PBXBuildFile; productRef = 2254AA602CEC616C00758518 /* FirebaseStorage */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		2202D9252CE7B7E70093989E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +60,11 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				2254AA5D2CEC616C00758518 /* FirebaseDatabase in Frameworks */,
+				2254AA5F2CEC616C00758518 /* FirebaseFirestore in Frameworks */,
+				2254AA5B2CEC616C00758518 /* FirebaseCore in Frameworks */,
+				2254AA612CEC616C00758518 /* FirebaseStorage in Frameworks */,
+				2254AA592CEC616C00758518 /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +125,11 @@
 			);
 			name = "parkinGait-ios";
 			packageProductDependencies = (
+				2254AA582CEC616C00758518 /* FirebaseAuth */,
+				2254AA5A2CEC616C00758518 /* FirebaseCore */,
+				2254AA5C2CEC616C00758518 /* FirebaseDatabase */,
+				2254AA5E2CEC616C00758518 /* FirebaseFirestore */,
+				2254AA602CEC616C00758518 /* FirebaseStorage */,
 			);
 			productName = "parkinGait-ios";
 			productReference = 2202D9142CE7B7E60093989E /* parkinGait-ios.app */;
@@ -195,6 +213,9 @@
 			);
 			mainGroup = 2202D90B2CE7B7E60093989E;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2202D9152CE7B7E60093989E /* Products */;
 			projectDirPath = "";
@@ -399,6 +420,7 @@
 				DEVELOPMENT_TEAM = Z556P4KV5A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -411,9 +433,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.parkinGait.parkinGait-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Debug;
 		};
@@ -428,6 +454,7 @@
 				DEVELOPMENT_TEAM = Z556P4KV5A;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -440,9 +467,13 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "com.parkinGait.parkinGait-ios";
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
+				SUPPORTS_XR_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
+				TARGETED_DEVICE_FAMILY = 1;
 			};
 			name = Release;
 		};
@@ -558,6 +589,45 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.5.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		2254AA582CEC616C00758518 /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		2254AA5A2CEC616C00758518 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		2254AA5C2CEC616C00758518 /* FirebaseDatabase */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseDatabase;
+		};
+		2254AA5E2CEC616C00758518 /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
+		};
+		2254AA602CEC616C00758518 /* FirebaseStorage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 2254AA572CEC616C00758518 /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseStorage;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 2202D90C2CE7B7E60093989E /* Project object */;
 }
