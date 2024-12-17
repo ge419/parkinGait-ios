@@ -1,32 +1,20 @@
-//
-//  StepLengthCalculatorView.swift
-//  parkinGait-ios
-//
-//  Created by 신창민 on 11/19/24.
-//
-
-
 import SwiftUI
 import CoreMotion
 import simd
 import Charts
 
-/// A view for tracking and displaying step length using the `StepLengthCalculator`.
-struct StepLengthCalculatorView: View {
+struct AccelMagView: View {
     @State private var isWalking = false
     @State private var stepLength: Double = 0
     @State private var recentAccelData = RingBuffer<Double>(size: 50)
-    
+    @State private var stepLengths: [Double] = []  // List of step lengths
+
     private var motionManager = CMMotionManager()
-    private var stepLengthCalculator = StepLengthCalculator()
+    private var accelMag = AccelMag()
     
     var body: some View {
         VStack {
-            Text("Step Length Calculator")
-                .font(.largeTitle)
-                .padding(.top, 20)
-            
-            Text("Step Length: \(String(format: "%.2f", stepLength)) inches")
+            Text("Current Step Length: \(String(format: "%.2f", stepLength)) inches")
                 .font(.title2)
                 .padding(.top, 10)
             
@@ -39,20 +27,33 @@ struct StepLengthCalculatorView: View {
                     .cornerRadius(10)
             }
             
+            // Real-time chart display
             if !recentAccelData.elements().isEmpty {
                 Chart {
                     ForEach(recentAccelData.elements().indices, id: \.self) { index in
                         LineMark(
                             x: .value("Index", index),
-                            y: .value("Z-Axis Acceleration", recentAccelData.elements()[index])
+                            y: .value("Acceleration Magnitude", recentAccelData.elements()[index])
                         )
                     }
                 }
-                .frame(height: 300)
+                .frame(height: 200)
                 .padding()
                 .chartXAxisLabel("Time Index")
-                .chartYAxisLabel("Z-Axis Acceleration")
+                .chartYAxisLabel("Acceleration Magnitude (m/s²)")
             }
+            
+            // Real-time Step Length List
+            Text("Step Lengths:")
+                .font(.title2)
+                .padding(.top, 10)
+            
+            List {
+                ForEach(stepLengths.indices, id: \.self) { index in
+                    Text("Step \(index + 1): \(String(format: "%.2f", stepLengths[index])) inches")
+                }
+            }
+            .frame(height: 200)  // Limit height of list
             
             Button(action: exportGaitData) {
                 Text("Export Data")
@@ -64,7 +65,7 @@ struct StepLengthCalculatorView: View {
             }
             .padding(.top, 20)
         }
-        .navigationTitle("Step Length Calculator")
+        .navigationTitle("Acceleration Magnitude Version")
         .onDisappear {
             stopIMU()
         }
@@ -84,7 +85,6 @@ struct StepLengthCalculatorView: View {
             motionManager.deviceMotionUpdateInterval = 0.1
             motionManager.startDeviceMotionUpdates(to: .main) { data, error in
                 if let motionData = data {
-                    // Prepare inputs for StepLengthCalculator
                     let accel = SIMD3<Float>(
                         Float(motionData.userAcceleration.x),
                         Float(motionData.userAcceleration.y),
@@ -99,22 +99,23 @@ struct StepLengthCalculatorView: View {
                     let timestamp = motionData.timestamp
                     
                     if self.recentAccelData.elements().isEmpty {
-                        self.stepLengthCalculator.startMotionTracking(timestamp: timestamp)
+                        self.accelMag.startMotionTracking(timestamp: timestamp)
                     }
                     
-                    // Update chart data
-                    recentAccelData.append(Double(accel.z))
+                    // Calculate acceleration magnitude
+                    let accelMagnitude = Double(sqrt(accel.x * accel.x + accel.y * accel.y + accel.z * accel.z))
+                    recentAccelData.append(accelMagnitude)
                     
                     // Process motion data to calculate step length
-                    if let detectedStepLength = stepLengthCalculator.processMotionData(
+                    if let detectedStepLength = accelMag.processAcceleration(
                         accel: accel,
                         gyro: gyro,
                         quaternion: quaternion,
                         timestamp: timestamp
                     ) {
-                        // Update step length on the UI
                         DispatchQueue.main.async {
                             stepLength = detectedStepLength
+                            stepLengths.append(detectedStepLength)  // Append detected step length
                         }
                     }
                 } else if let error = error {
@@ -127,10 +128,13 @@ struct StepLengthCalculatorView: View {
     private func stopIMU() {
         motionManager.stopDeviceMotionUpdates()
         recentAccelData = RingBuffer(size: 50)
+        accelMag.resetAllIntegrations()  // Reset velocity and position integrators
+        print("Tracking stopped, integrators reset.")
     }
+
     
     private func exportGaitData() {
-        if let fileURL = stepLengthCalculator.exportGaitData(fileName: "gait_data.csv") {
+        if let fileURL = accelMag.exportGaitData(fileName: "gait_data.csv") {
             let activityView = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
             
             if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,

@@ -25,7 +25,8 @@ class StepLengthCalculator {
     private var dt = DeltaTime()
     private var zvu = ZVU()
     
-    private var previousAccel: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+    // Storage for all motion data (acceleration, gyroscope, step detection, etc.)
+    private var gaitRecords: [GaitRecord] = []
     
     init() {
         zvu.begin(threshA: ACCEL_THRESH, threshB: GYRO_THRESH, sampleThresh: 30)
@@ -43,9 +44,10 @@ class StepLengthCalculator {
         
         // Handle zero velocity update
         let notMoving = zvu.check(a: ag, b: gyro)
+        var stepLength: Double? = nil
+        
         if notMoving {
             resetPos()
-            return nil
         } else {
             let deltaTime = dt.step(ts: timestamp)
             if deltaTime > 0 {
@@ -53,14 +55,46 @@ class StepLengthCalculator {
                 _ = posIntegral.step(v: velocity, dt: deltaTime)
                 
                 if Double(length(posIntegral.cum)) > DISTANCE_THRESHOLD {
-                    let stepLength = Double(length(posIntegral.cum))
+                    stepLength = Double(length(posIntegral.cum))
                     resetVel()
                     resetPos()
-                    return stepLength
                 }
             }
+
         }
-        return nil
+        
+        // Store all motion data along with step detection
+        let gaitRecord = GaitRecord(
+            timestamp: timestamp,
+            accelX: Double(ag.x),
+            accelY: Double(ag.y),
+            accelZ: Double(ag.z),
+            gyroX: Double(gyro.x),
+            gyroY: Double(gyro.y),
+            gyroZ: Double(gyro.z),
+            stepDetected: stepLength != nil,
+            stepLength: stepLength
+        )
+        gaitRecords.append(gaitRecord)
+        
+        return stepLength
+    }
+    
+    func exportGaitData(fileName: String) -> URL? {
+        let path = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+        var csvText = "Timestamp,AccelX,AccelY,AccelZ,GyroX,GyroY,GyroZ,StepDetected,StepLength\n"
+        
+        for record in gaitRecords {
+            csvText.append("\(record.timestamp),\(record.accelX),\(record.accelY),\(record.accelZ),\(record.gyroX),\(record.gyroY),\(record.gyroZ),\(record.stepDetected ? "Yes" : "No"),\(record.stepLength != nil ? String(record.stepLength!) : "")\n")
+        }
+        
+        do {
+            try csvText.write(to: path, atomically: true, encoding: .utf8)
+            return path
+        } catch {
+            print("Failed to write CSV: \(error.localizedDescription)")
+            return nil
+        }
     }
     
     private func resetPos() {

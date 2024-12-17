@@ -46,14 +46,23 @@ struct MainPage: View {
                         .foregroundColor(.white)
                         .cornerRadius(10)
                 }
-//                NavigationLink(destination: Dashboard()) {
-//                    Text("Go to Dashboard")
-//                        .font(.title2)
-//                        .padding()
-//                        .background(Color.orange)
-//                        .foregroundColor(.white)
-//                        .cornerRadius(10)
-//                }
+                NavigationLink(destination: DynamicStepLengthCounterView()) {
+                    Text("DynamicStepcounter")
+                        .font(.title2)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+                
+                NavigationLink(destination: AccelMagView()) {
+                    Text("Accleration Magnitude")
+                        .font(.title2)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
                 
                 NavigationLink(destination: EditProfile()) {
                     Text("Change User Information")
@@ -64,14 +73,14 @@ struct MainPage: View {
                         .cornerRadius(10)
                 }
                 
-//                NavigationLink(destination: Calibration()) {
-//                    Text("Recalibrate")
-//                        .font(.title2)
-//                        .padding()
-//                        .background(Color.red)
-//                        .foregroundColor(.white)
-//                        .cornerRadius(10)
-//                }
+                NavigationLink(destination: Calibration()) {
+                    Text("Recalibrate")
+                        .font(.title2)
+                        .padding()
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
                 
                 Button(action: {
                     AuthViewModel().signOut()

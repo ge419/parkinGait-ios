@@ -19,7 +19,7 @@ protocol AuthenticationFormProtocol {
 class AuthViewModel: ObservableObject {
     @Published var userSession: FirebaseAuth.User?
     @Published var currentUser: User?
-//    @Published var currentCalibration: UserCalibration?
+    @Published var currentCalibration: UserCalibration?
     @Published var showAlert: Bool = false
     @Published var alertMessage: String = ""
     @Published var calibrationFetched: Bool = false
@@ -29,7 +29,7 @@ class AuthViewModel: ObservableObject {
         self.userSession = Auth.auth().currentUser
         Task {
             await fetchUser()
-//            await fetchCalibration() // not sure if its right
+            await fetchCalibration() // not sure if its right
         }
     }
     
@@ -129,44 +129,44 @@ class AuthViewModel: ObservableObject {
         }
     }
     
-//    func fetchCalibration() async {
-//        guard let uid = Auth.auth().currentUser?.uid else { return }
-//        
-//        let ref = Database.database().reference().child("users").child(uid).child("Calibration")
-//        
-//        do {
-//            let snapshot = try await ref.getData()
-//            guard let data = snapshot.value as? [String: Any] else { return }
-//            self.currentCalibration = UserCalibration(id: uid, gaitConstant: data["gaitConstant"] as? Double ?? 0, threshold: data["Threshold"] as? Double ?? 0, goalStep: data["GoalStep"] as? String ?? "", placement: data["placement"] as? String ?? "")
-//            self.calibrationFetched = true
-//            print("DEBUG: Current user calibration is \(String(describing: self.currentCalibration))")
-//        } catch {
-//            print("DEBUG: Failed to fetch calibration with error \(error.localizedDescription)")
-//        }
-//    }
-//    
-//    func saveCalibration(gaitConstant: Double, threshold: Double, goalStep: String, placement: String) async {
-//        guard let uid = Auth.auth().currentUser?.uid else { return }
-//        
-//        let calData: [String: Any] = [
-//            "gaitConstant": gaitConstant,
-//            "Threshold": threshold,
-//            "GoalStep": goalStep,
-//            "Placement": placement
-//        ]
-//        
-//        do {
-//            let ref = Database.database().reference().child("users").child(uid).child("Calibration")
-//            try await ref.setValue(calData)
-//            self.alertMessage = "Successfully uploaded calibration."
-//            self.showAlert = true
-//            await fetchUser()
-//        } catch {
-//            self.alertMessage = "Failed to upload calibration."
-//            self.showAlert = true
-//            print("DEBUG: Failed to upload calibration data with error \(error.localizedDescription)")
-//        }
-//    }
+    func fetchCalibration() async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let ref = Database.database().reference().child("users").child(uid).child("Calibration")
+        
+        do {
+            let snapshot = try await ref.getData()
+            guard let data = snapshot.value as? [String: Any] else { return }
+            self.currentCalibration = UserCalibration(id: uid, gaitConstant: data["gaitConstant"] as? Double ?? 0, threshold: data["Threshold"] as? Double ?? 0, goalStep: data["GoalStep"] as? String ?? "", placement: data["placement"] as? String ?? "")
+            self.calibrationFetched = true
+            print("DEBUG: Current user calibration is \(String(describing: self.currentCalibration))")
+        } catch {
+            print("DEBUG: Failed to fetch calibration with error \(error.localizedDescription)")
+        }
+    }
+    
+    func saveCalibration(gaitConstant: Double, threshold: Double, goalStep: String, placement: String) async {
+        guard let uid = Auth.auth().currentUser?.uid else { return }
+        
+        let calData: [String: Any] = [
+            "gaitConstant": gaitConstant,
+            "Threshold": threshold,
+            "GoalStep": goalStep,
+            "Placement": placement
+        ]
+        
+        do {
+            let ref = Database.database().reference().child("users").child(uid).child("Calibration")
+            try await ref.setValue(calData)
+            self.alertMessage = "Successfully uploaded calibration."
+            self.showAlert = true
+            await fetchUser()
+        } catch {
+            self.alertMessage = "Failed to upload calibration."
+            self.showAlert = true
+            print("DEBUG: Failed to upload calibration data with error \(error.localizedDescription)")
+        }
+    }
     
     func updateStepLength(sec: String, stepLengthEst: Double) async {
 //        func updateStepLength(sec: TimeInterval, stepLengthEst: Double) async {
