@@ -64,6 +64,16 @@ struct MainPage: View {
                         .cornerRadius(10)
                 }
                 
+                NavigationLink(destination: AccelMagFFTView()) {
+                    Text("Accleration Magnitude")
+                        .font(.title2)
+                        .padding()
+                        .background(Color.orange)
+                        .foregroundColor(.white)
+                        .cornerRadius(10)
+                }
+
+                
                 NavigationLink(destination: EditProfile()) {
                     Text("Change User Information")
                         .font(.title2)
