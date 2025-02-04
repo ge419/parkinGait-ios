@@ -16,6 +16,9 @@ struct GaitRecord {
     let gyroX: Double
     let gyroY: Double
     let gyroZ: Double
+//    let accelMagnitude: Double
+//    let filteredAccelMagnitude: Double
     let stepDetected: Bool
     let stepLength: Double?
 }
+

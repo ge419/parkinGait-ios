@@ -65,7 +65,7 @@ struct MainPage: View {
                 }
                 
                 NavigationLink(destination: AccelMagFFTView()) {
-                    Text("Accleration Magnitude")
+                    Text("Accleration Magnitude FFT")
                         .font(.title2)
                         .padding()
                         .background(Color.orange)

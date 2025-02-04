@@ -8,6 +8,7 @@
 import SwiftUI
 import CoreMotion
 import Charts
+import simd
 
 struct AccelMagFFTView: View {
     @StateObject private var accelMagFFT = AccelMagFFT()
@@ -30,32 +31,57 @@ struct AccelMagFFTView: View {
                     .cornerRadius(10)
             }
 
-            if !accelMagFFT.filteredData.isEmpty {
+            if !accelMagFFT.filteredAccelerationData.isEmpty {
                 Chart {
-                    ForEach(accelMagFFT.filteredData.indices, id: \.self) { index in
+                    ForEach(accelMagFFT.filteredAccelerationData.indices, id: \.self) { index in
                         LineMark(
-                            x: .value("Time", accelMagFFT.filteredData[index].timestamp),
-                            y: .value("Filtered Acceleration", accelMagFFT.filteredData[index].accelMagnitude)
+                            x: .value("Time", accelMagFFT.filteredAccelerationData[index].timestamp),
+                            y: .value("Filtered Acceleration", accelMagFFT.filteredAccelerationData[index].accelMagnitude)
                         )
                     }
                 }
                 .frame(height: 200)
                 .padding()
             }
-
-            Button(action: accelMagFFT.analyzeSteps) {
-                Text("Analyze Steps")
-                    .font(.title2)
-                    .padding()
-                    .background(Color.blue)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-            }
         }
     }
     
     private func toggleIMU() {
         isWalking.toggle()
+        
+        if isWalking {
+            startIMU()
+        } else {
+            stopIMU()
+        }
+    }
+
+    private func startIMU() {
+        if motionManager.isDeviceMotionAvailable {
+            motionManager.deviceMotionUpdateInterval = 0.1
+            motionManager.startDeviceMotionUpdates(to: .main) { data, error in
+                if let motionData = data {
+                    let accel = SIMD3<Float>(
+                        Float(motionData.userAcceleration.x),
+                        Float(motionData.userAcceleration.y),
+                        Float(motionData.userAcceleration.z)
+                    )
+                    let quaternion = motionData.attitude.quaternion
+                    let timestamp = motionData.timestamp
+
+                    accelMagFFT.collectData(timestamp: timestamp, accel: accel, quaternion: quaternion)
+                } else if let error = error {
+                    print("Device motion error: \(error.localizedDescription)")
+                }
+            }
+        }
+    }
+
+
+    
+    private func stopIMU() {
+        motionManager.stopDeviceMotionUpdates()
+        accelMagFFT.analyzeSteps() // Automatically analyze after stopping
     }
 }
 
