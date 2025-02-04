@@ -11,7 +11,7 @@ import Charts
 import simd
 
 struct AccelMagFFTView: View {
-    @StateObject private var accelMagFFT = AccelMagFFT()
+    private var accelMagFFT = AccelMagFFT()
     @State private var isWalking = false
     private var motionManager = CMMotionManager()
 
@@ -66,10 +66,15 @@ struct AccelMagFFTView: View {
                         Float(motionData.userAcceleration.y),
                         Float(motionData.userAcceleration.z)
                     )
+                    let gyro = SIMD3<Float>(
+                        Float(motionData.rotationRate.x),
+                        Float(motionData.rotationRate.y),
+                        Float(motionData.rotationRate.z)
+                    )
                     let quaternion = motionData.attitude.quaternion
                     let timestamp = motionData.timestamp
 
-                    accelMagFFT.collectData(timestamp: timestamp, accel: accel, quaternion: quaternion)
+                    accelMagFFT.collectData(timestamp: timestamp, accel: accel, gyro: gyro, quaternion: quaternion)
                 } else if let error = error {
                     print("Device motion error: \(error.localizedDescription)")
                 }
@@ -77,7 +82,18 @@ struct AccelMagFFTView: View {
         }
     }
 
-
+    private func exportGaitData() {
+        if let fileURL = accelMagFFT.exportGaitData(fileName: "gait_data.csv") {
+            let activityView = UIActivityViewController(activityItems: [fileURL], applicationActivities: nil)
+            
+            if let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
+               let rootViewController = windowScene.windows.first?.rootViewController {
+                rootViewController.present(activityView, animated: true, completion: nil)
+            }
+        } else {
+            print("No gait data to export.")
+        }
+    }
     
     private func stopIMU() {
         motionManager.stopDeviceMotionUpdates()
