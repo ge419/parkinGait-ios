@@ -19,8 +19,8 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
 2. **Step Length Calculator**: Calculates step length using device IMU sensors.
 3. **Step Length with Height**: Calculates step length by factoring in user height and stride frequency.
 
-### **Data Export(Under Development)**
-- Export gait data (timestamp, accelerometer, gyroscope, and step length) to a CSV file.
+### **Data Export**
+- Export gait data (timestamp, accelerometer, gyroscope, step length, etc.) to a CSV file.
 - Save and share files via the Files app, email, or other apps using the iOS share sheet.
 
 ### **Interactive Visualization**
@@ -41,6 +41,7 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
    ```
 2. Open the project in Xcode:
 3. Build and run the app on a physical device.
+4. If you run into errors regarding Xcode, check if the bundle identifier is correct.
 
 ---
 
@@ -62,7 +63,7 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
 # Step Length Calculation for Parkinson's Patients
 
 ## 1. Application
-Current mobile application on iOS supports multiple algorithms for testing purposes. Login/logout is implemented, and the users 
+Current mobile application on iOS supports multiple algorithms for testing purposes. See description above to get started..
 
 ## 2. Variables
 This section discusses the variables that affect step length calculation. There may be more variables that had not been considered so far that influences step length calculation.
@@ -189,12 +190,12 @@ This algorithm introduces Fast Fourier Transform (FFT) filtering to improve step
 - Once the user stops walking (and presses stop walking button), data collection stops and data processing begins.
 - Gravity is removed to isolate motion-related acceleration similar to Algorithm 3.3.
 - Acceleration magnitude is calculated using $ AccleMag = \sqrt{(a_x^2 + a_y^2+a_z^2)} $. 
-- Fast Fourier Transform is applied to remove high frequency noise, and frequencies above `CUTOFF_FREQUENCY` are set to zero. Low-pass filter is used to
-- Inverse FFT reconstructs the filtered acceleration signal for cleaner step detection.
+- Fast Fourier Transform and low-pass filter is applied to remove high frequency noise, and frequencies above `CUTOFF_FREQUENCY` are set to zero.
+- Inverse FFT reconstructs the filtered acceleration signal for cleaner step detection. Note that the resulting filtered acceleration magnitude may be negative.
 - Similar to Algorithm 3.3, Step start (positive spark) is detected when acceleration exceeds `ACCEL_THRESHOLD`. Step end (negative spark) is detected when acceleration drops below `ACCEL_THRESHOLD`. A step is considered valid if its duration falls between MIN_DELTA_TIME (0.5s) and MAX_DELTA_TIME (2.0s).
 - If a previous timestamp exists, the acceleration is integrated to compute velocity, and velocity is integrated to compute position. This step tracks displacement over time and calculates step length.
 - After computing step length, integration is reset to avoid error accumulation. The step count is incremented, and the timestamp of the step is stored.
-- Average step length and variance are computed from detected steps and step length accuracy is compared against `TARGET_STEP_LENGTH`. The computed accuracy is used to provide feedback on the steps taken (whether to shorten or increase steps). Current cutoff for good steps are 90%.
+- Average step length and variance are computed from detected steps and step length accuracy is compared against `TARGET_STEP_LENGTH`. The computed accuracy is used to provide feedback on the steps taken (whether to shorten or increase steps). Current cutoff for good steps is 90%.
 
 #### 3.4.2 Insights
 - FFT filtering removes high frequency noise for cleaner step detection as it eliminates unwanted accelerometer noise. This means vibrations from phone movements that are not related to walking or taking steps will be filtered out.
@@ -224,4 +225,34 @@ Consider the following elements for future development:
 - Calibration: Re-introduce calibration so that accuracy on step length calculation can be improved. Capturing a general trend on walking behavior is extremely difficult. 
 - Replace double integration with a different method. Double integration showed to cause drift over multiple steps where step lengths keep increasing. 
 
+### 4.3 Recommendation (Future Roadmap)
+I recommend starting from acceleration magnitude with FFT. This algorithm has functional data processing and exporting mechanisms, and is capable of handling step detection well (given that a user-specific threshold is being used).
 
+The current issue with this algorithm is that the step length calculation process isn't solid. Try to implement different approachs to test which algorithm has high accuracy and sensitivity. There are also a lot of hardcoded values that need to be adjusted based on users' walking styles in the calibration process.
+
+#### 4.3.1 Data Processing and Calibration
+- Use acceleration magnitude to detect steps, and FFT to smooth the output. Acceleration magnitude is useful as it doesn't take direction into account.
+- Removing gravity is also done in the current algorithm. This will eliminate the effect of gravity no matter the orientation of the phone as it uses quaternion to check the phone's orientation and projects acceleration onto gravity.
+- Introduce calibration to adjust for different walking styles of users. Calibration should extract gait constant and user-specific threshold for peak detection, and should be saved to the database for later use. (See next section for more on user-specific threshold)
+
+#### 4.3.2 Step Detection
+- Steps are detected using peak detection algorithm. When there is a peak in acceleration magnitude above certain threshold, we assume a step has occurred. There may be other approaches to do step detection, but peak detection have proved to be well-performing so far.
+- User-specific thresholds mean a dynamic threshold that could handle the variances in the average acceleration magnitude value of each user. This should be calculated in the calibration process. Algorithm 3.1 has some resource regarding a dynamic threshold. Using insight from 3.1 will help accommodate the differences between users well.
+
+#### 4.3.3 Step Length Calculation
+- Currenly step length is calculated using double integration. This causes drift, and is not a reliable way of estimating step length.
+- Instead, use gait constant (user's walking speed) along with delta time between start and end of a peak. There may be more adjustments required to make the result accurate, but this is a good starting point to consider.
+
+#### 4.3.4 Feedback and Statistics
+- The first few algorithms (3.1 and 3.2) have metronomes to help users keep their pace as well as visual and audio(vibration) feedback that notifies users if their steps are too short or long. Build upon this code to provide users feedback on the steps taken.
+- Post-calculation leaves much room for accuracy as not all steps have to be accurate. Capture a general trend in the steps using average and standard deviation. While the current algorithm contains code to calculate the statistics, this can be improved by implementing and testing different ways to calculate accuracy. 
+
+#### 4.3.4 Testing
+- In the testing process, measure the steps you are actually taking, and compare to the results you see calculated. Test for small/large/fast/slow steps to make sure the algorithm is capable of handling user's gait in any case.
+- It's important that testing codnitions are decided and maintained before testing starts. For example, walking with or without shoes on may result in different results for the same walking pattern.
+- The position of the phone for algorithm 3.3 and 3.4 will not matter as long as they are strapped near the ankle. The algorithm is capable of determining the phone's orientation, and the correlating gravity will also be eliminated. 
+
+#### 4.3.5 Miscellaneous 
+- Supporting extreme behaviors of waking (e.g. shuffling, lunge, jumping, running) simultaneously may not be viable. These would require calibration beforehand so that t he algorithm is aware of the abnormal walking activity
+- Collect and store data for each user, and update the variables calculated in the calibration process. Gait constant and dynamic thresholds can be greatly improved with enough test data. Applying the walking trend of a user into the algorithm is crucial for making the algorithm accurate.
+- User's height could be leveraged to help calculate step lenghts, but becareful not to rely on height as it could produce biased results.
