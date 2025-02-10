@@ -10,14 +10,18 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
 - **Real-Time Data Visualization**: Displays acceleration and step length data in interactive charts.
 - **Data Export(Under Development)**: Export collected gait data (accelerometer, gyroscope, and step length) to a CSV file for further analysis.
 - **User-Friendly Interface**: Intuitive design for easy interaction and tracking.
+- **Feedback and Statistics**: Provides feedback on user's step lengths based on calculations.
 
 ---
 
 ## **Core Components**
 ### **Gait Tracking Models**
-1. **Step Counter**: Tracks steps and distance using peak detection on accelerometer data.
-2. **Step Length Calculator**: Calculates step length using device IMU sensors.
+1.**Step Length Calculator**: Calculates step length using device IMU sensors.
+2. **Step Counter**: Tracks steps and distance using peak detection on accelerometer data.
 3. **Step Length with Height**: Calculates step length by factoring in user height and stride frequency.
+4. **DynamicStepCounter**: Detects step length using dynamic threshold. (INCOMPLETE; Do not proceed with this algorithm)
+5. **Acceleration Magnitude**: Calculates step length using acceleration magnitude and double integration.
+6. **Acceleration Magnitude FFT**: Applies Fast Fourier Transformation to the previous algorithm.
 
 ### **Data Export**
 - Export gait data (timestamp, accelerometer, gyroscope, step length, etc.) to a CSV file.
@@ -63,18 +67,18 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
 # Step Length Calculation for Parkinson's Patients
 
 ## 1. Application
-Current mobile application on iOS supports multiple algorithms for testing purposes. See description above to get started..
+Current mobile application on iOS supports multiple algorithms for testing purposes. See description above to get started.
 
 ## 2. Variables
 This section discusses the variables that affect step length calculation. There may be more variables that had not been considered so far that influences step length calculation.
-- Position of the device: Of all the variabes, position of the device impacts the step length calculation the most. In most cases, it was assumed that the device will be attached to the user's ankle. Make sure the orientation of the phone is clear (unless using acceleration magnitude) before making adjustments to the algorithm or developing a new algorithm.
-- Acceleration: Based on the device's orientation, one of x, y, z-acceleration, or combination of all three can be used. Acceleration is the key variable to the step length calculation process, as the calculation step is usually associated with time a step was taken and the user's walking speed.
-- Gravity: When using acceleration, the effect of gravity must be taken under consideration. Different algorithms have different approaches to dealing with gravity, but it's optimal to remove all effect of gravity before further analysis is done. Removing gravity can be easily performed by projecting the acceleration to gravity.
-- Height: In some cases, user's height can be used to help calculate step lengths, but relying on height could introduce biases to step lengths. Use this to estimate the user's target step length.
-- Walking speed: Some algorithms show different results if walking speed is altered. 
-- Static variables: Any fixed values used in the algorithm could lead to lack of customization for different users. Since walking differs greatly from user to user, it is highly recommended that static variables are avoided. It is almost impossible to find the optimal static value that can generally fit most of the users. There is also no specific way of finding these values -- exhaustively testing different values will greatly slow down progress. Most common example is threshold for peak detection. 
-- Device/language-specific issues: Depending on which device is used for testing, there could be differences in results. For example, React Native application showed different results from an iOS application that had the exact same functionality. Data processing is dealt differently in different programming languages, so it is important to synchonize the results on different devices as much as possible.
-- Testing conditions: There should be a set testing condition to test different algorithms. Testing the same algorithm on different people could produce drastically different results. Synchronize the testing conditions and instructions to ensure consistent testing results.
+- **Position of the device**: Of all the variabes, position of the device impacts the step length calculation the most. In most cases, it was assumed that the device will be attached to the user's ankle. Make sure the orientation of the phone is clear (unless using acceleration magnitude) before making adjustments to the algorithm or developing a new algorithm.
+- **Acceleration**: Based on the device's orientation, one of x, y, z-acceleration, or combination of all three can be used. Acceleration is the key variable to the step length calculation process, as the calculation step is usually associated with time a step was taken and the user's walking speed.
+- **Gravity**: When using acceleration, the effect of gravity must be taken under consideration. Different algorithms have different approaches to dealing with gravity, but it's optimal to remove all effect of gravity before further analysis is done. Removing gravity can be easily performed by projecting the acceleration to gravity.
+- **Height**: In some cases, user's height can be used to help calculate step lengths, but relying on height could introduce biases to step lengths. Use this to estimate the user's target step length.
+- **Walking speed**: Some algorithms show different results if walking speed is altered. 
+- **Static variables**: Any fixed values used in the algorithm could lead to lack of customization for different users. Since walking differs greatly from user to user, it is highly recommended that static variables are avoided. It is almost impossible to find the optimal static value that can generally fit most of the users. There is also no specific way of finding these values -- exhaustively testing different values will greatly slow down progress. Most common example is threshold for peak detection. 
+- **Device/language-specific issues**: Depending on which device is used for testing, there could be differences in results. For example, React Native application showed different results from an iOS application that had the exact same functionality. Data processing is dealt differently in different programming languages, so it is important to synchonize the results on different devices as much as possible.
+- **Testing conditions**: There should be a set testing condition to test different algorithms. Testing the same algorithm on different people could produce drastically different results. Synchronize the testing conditions and instructions to ensure consistent testing results.
 
 
 
