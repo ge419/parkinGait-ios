@@ -42,7 +42,9 @@ class AccelMagFFT {
     
     // Step detection states
     private var positiveSparkDetected: Bool = false
-    private var stepStartTime: TimeInterval?
+    private var stepStartTime: Float?
+    private var lastPositiveSparkTime: Float?
+    private var lastNegativeSparkTime: Float?
 
     init() {
         fftSetup = vDSP_DFT_zop_CreateSetup(nil, vDSP_Length(WINDOW_SIZE), vDSP_DFT_Direction.FORWARD)
@@ -64,7 +66,7 @@ class AccelMagFFT {
         let accelMagnitude = length(ag)
 
         let record = AccelFFTRecord(
-            timestamp: timestamp,
+            timestamp: Float(timestamp),
             accelX: Double(ag.x),
             accelY: Double(ag.y),
             accelZ: Double(ag.z),
@@ -150,8 +152,89 @@ class AccelMagFFT {
         return filteredData
     }
 
+//    private func detectSteps() {
+//        var lastStepTime: Float? = nil
+//
+//        for i in 1..<collectedData.count {
+//            let accelMag = collectedData[i].filteredAccelMagnitude ?? collectedData[i].accelMagnitude
+//
+//            // **Positive Spark Detection (Step Start)**
+//            if accelMag > Double(ACCEL_THRESHOLD), !positiveSparkDetected {
+//                positiveSparkDetected = true
+//                stepStartTime = Float(collectedData[i].timestamp)
+//                lastPositiveSparkTime = stepStartTime
+//                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+//                cumulativePosition = SIMD3<Float>(0, 0, 0)
+//                velIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//                posIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//
+//
+//                // **Update positive spark time in collectedData**
+//                collectedData[i].positiveSparkTime = lastPositiveSparkTime
+//            }
+//
+//            // **Negative Spark Detection (Step End)**
+//            else if accelMag < Double(ACCEL_THRESHOLD), positiveSparkDetected {
+//                positiveSparkDetected = false
+//                lastNegativeSparkTime = Float(collectedData[i].timestamp)
+//
+//                if let startTime = stepStartTime {
+//                    let deltaTime = Float(collectedData[i].timestamp - startTime)
+//
+//                    if MIN_DELTA_TIME <= deltaTime && deltaTime <= MAX_DELTA_TIME {
+//                        let accelVec = SIMD3<Float>(
+//                            Float(collectedData[i].accelX),
+//                            Float(collectedData[i].accelY),
+//                            Float(collectedData[i].accelZ)
+//                        )
+//
+//                        cumulativeVelocity = velIntegral.step(v: accelVec, dt: deltaTime)
+//
+//                        if let lastTime = lastStepTime {
+//                            let timeSinceLastStep = collectedData[i].timestamp - lastTime
+//                            if timeSinceLastStep > MAX_DELTA_TIME {
+//                                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+//                                cumulativePosition = SIMD3<Float>(0, 0, 0)
+//                                velIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//                                posIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//
+//                            }
+//                        }
+//
+//                        cumulativePosition = posIntegral.step(v: cumulativeVelocity, dt: deltaTime)
+//                        cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+//                        velIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//
+//
+//                        // **Bias Compensation**
+//                        let biasCorrectionFactor: Float = 0.98
+//                        cumulativePosition *= biasCorrectionFactor
+//
+//                        let stepLength = Double(length(cumulativePosition))
+//                        cumulativePosition = SIMD3<Float>(0, 0, 0)
+//                        posIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//
+//
+//                        // **Update `collectedData[i]` instead of creating a new object**
+//                        collectedData[i].stepDetected = true
+//                        collectedData[i].stepLength = stepLength
+//                        collectedData[i].positiveSparkTime = lastPositiveSparkTime
+//                        collectedData[i].negativeSparkTime = lastNegativeSparkTime
+//
+//                        lastStepTime = collectedData[i].timestamp
+//                    }
+//                    stepStartTime = nil
+//                }
+//
+//                // **Reset velocity and position after each step to prevent drift**
+//                velIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//                posIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+//            }
+//        }
+//    }
+    
     private func detectSteps() {
-        var detectedStepsTemp: [AccelFFTRecord] = []
+        var lastStepTime: Float? = nil
 
         for i in 1..<collectedData.count {
             let accelMag = collectedData[i].filteredAccelMagnitude ?? collectedData[i].accelMagnitude
@@ -159,13 +242,18 @@ class AccelMagFFT {
             // **Positive Spark Detection (Step Start)**
             if accelMag > Double(ACCEL_THRESHOLD), !positiveSparkDetected {
                 positiveSparkDetected = true
-                stepStartTime = collectedData[i].timestamp
-                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
-                cumulativePosition = SIMD3<Float>(0, 0, 0)
+                stepStartTime = Float(collectedData[i].timestamp)
+                lastPositiveSparkTime = stepStartTime
+                
+                // **DO NOT reset cumulative velocity/position immediately**
+                velIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
+                posIntegral.reset(vec: SIMD3<Float>(0, 0, 0))
             }
+
             // **Negative Spark Detection (Step End)**
             else if accelMag < Double(ACCEL_THRESHOLD), positiveSparkDetected {
                 positiveSparkDetected = false
+                lastNegativeSparkTime = Float(collectedData[i].timestamp)
 
                 if let startTime = stepStartTime {
                     let deltaTime = Float(collectedData[i].timestamp - startTime)
@@ -179,32 +267,48 @@ class AccelMagFFT {
 
                         cumulativeVelocity = velIntegral.step(v: accelVec, dt: deltaTime)
 
+                        // **Check if too much time has passed since last step**
+                        if let lastTime = lastStepTime {
+                            let timeSinceLastStep = collectedData[i].timestamp - lastTime
+                            if timeSinceLastStep > MAX_DELTA_TIME {
+                                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+                                cumulativePosition = SIMD3<Float>(0, 0, 0)
+                            }
+                        }
+
                         cumulativePosition = posIntegral.step(v: cumulativeVelocity, dt: deltaTime)
+
+                        // **Bias Compensation**
+                        let biasCorrectionFactor: Float = 0.98
+                        cumulativePosition *= biasCorrectionFactor
 
                         let stepLength = Double(length(cumulativePosition))
 
+                        // **Store Step Length**
                         collectedData[i].stepDetected = true
                         collectedData[i].stepLength = stepLength
-                        detectedStepsTemp.append(collectedData[i])
+                        collectedData[i].positiveSparkTime = lastPositiveSparkTime
+                        collectedData[i].negativeSparkTime = lastNegativeSparkTime
+
+                        lastStepTime = collectedData[i].timestamp
                     }
                     stepStartTime = nil
                 }
 
+                // **Reset after the step is processed, not immediately at spark detection**
                 cumulativeVelocity = SIMD3<Float>(0, 0, 0)
                 cumulativePosition = SIMD3<Float>(0, 0, 0)
             }
         }
-
-        detectedSteps = detectedStepsTemp
-        stepCount = detectedSteps.count
     }
+
     
     func exportGaitData(fileName: String) -> URL? {
         let path = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
-        var csvText = "Timestamp,AccelX,AccelY,AccelZ,AccelMagnitude,FilteredAccelMag, GyroX,GyroY,GyroZ,StepDetected,StepLength\n"
+        var csvText = "Timestamp,AccelX,AccelY,AccelZ,AccelMagnitude,FilteredAccelMag,GyroX,GyroY,GyroZ,StepDetected,StepLength,PositiveSparkTime,NegativeSparkTime\n"
 
         for record in collectedData {
-            csvText.append("\(record.timestamp),\(record.accelX),\(record.accelY),\(record.accelZ),\(record.accelMagnitude),\(String(describing: record.filteredAccelMagnitude)), \(record.gyroX),\(record.gyroY),\(record.gyroZ),\(record.stepDetected ? "Yes" : "No"),\(record.stepLength != nil ? String(record.stepLength!) : "")\n")
+            csvText.append("\(record.timestamp),\(record.accelX),\(record.accelY),\(record.accelZ),\(record.accelMagnitude),\(String(describing: record.filteredAccelMagnitude)),\(record.gyroX),\(record.gyroY),\(record.gyroZ),\(record.stepDetected ? "Yes" : "No"),\(record.stepLength != nil ? String(record.stepLength!) : ""),\(record.positiveSparkTime != nil ? String(record.positiveSparkTime!) : ""),\(record.negativeSparkTime != nil ? String(record.negativeSparkTime!) : "")\n")
         }
 
         do {
@@ -244,7 +348,7 @@ class AccelMagFFT {
 
 /// **Data Model for Gait Analysis**
 struct AccelFFTRecord {
-    let timestamp: TimeInterval
+    let timestamp: Float
     let accelX: Double
     let accelY: Double
     let accelZ: Double
@@ -255,4 +359,6 @@ struct AccelFFTRecord {
     var filteredAccelMagnitude: Double?
     var stepDetected: Bool
     var stepLength: Double?
+    var positiveSparkTime: Float?
+    var negativeSparkTime: Float?
 }

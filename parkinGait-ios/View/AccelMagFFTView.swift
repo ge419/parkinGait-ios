@@ -17,11 +17,23 @@ struct AccelMagFFTView: View {
 
     var body: some View {
         VStack {
-            Text(accelMagFFT.recommendation)
-                .font(.headline)
-                .foregroundColor(.blue)
-                .padding()
+            // **Step Statistics**
+            VStack(alignment: .leading, spacing: 5) {
+                Text("Gait Analysis Summary")
+                    .font(.headline)
+                    .foregroundColor(.blue)
+                    .padding(.top)
 
+                Text("Total Steps: \(accelMagFFT.stepCount)")
+                Text("Avg Step Length: \(String(format: "%.2f", accelMagFFT.avgStepLength)) inches")
+                Text("Step Variance: \(String(format: "%.2f", accelMagFFT.stepVariance)) inches²")
+                Text("Accuracy: \(String(format: "%.1f", accelMagFFT.accuracy))%")
+                Text(accelMagFFT.recommendation)
+                    .foregroundColor(.red)
+            }
+            .padding()
+
+            // **Start/Stop Tracking Button**
             Button(action: toggleIMU) {
                 Text(isWalking ? "Stop Tracking" : "Start Tracking")
                     .font(.title2)
@@ -30,19 +42,38 @@ struct AccelMagFFTView: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
             }
+            .padding()
 
+            // **Filtered Acceleration Graph with Step Lengths**
             if !accelMagFFT.filteredAccelerationData.isEmpty {
                 Chart {
+                    // **Plot Filtered Acceleration**
                     ForEach(accelMagFFT.filteredAccelerationData.indices, id: \.self) { index in
                         LineMark(
                             x: .value("Time", accelMagFFT.filteredAccelerationData[index].timestamp),
                             y: .value("Filtered Acceleration", accelMagFFT.filteredAccelerationData[index].accelMagnitude)
                         )
                     }
+
+                    // **Plot Detected Steps**
+                    ForEach(accelMagFFT.detectedSteps, id: \.timestamp) { step in
+                        PointMark(
+                            x: .value("Time", step.timestamp),
+                            y: .value("Filtered Acceleration", step.accelMagnitude)
+                        )
+                        .foregroundStyle(.red)
+                        .annotation(position: .top) {
+                            Text("\(String(format: "%.1f", step.stepLength ?? 0))\"")
+                                .font(.caption)
+                                .foregroundColor(.red)
+                        }
+                    }
                 }
-                .frame(height: 200)
+                .frame(height: 250)
                 .padding()
             }
+
+            // **Export Data Button**
             Button(action: exportGaitData) {
                 Text("Export Data")
                     .font(.title2)
@@ -54,10 +85,10 @@ struct AccelMagFFTView: View {
             .padding(.top, 20)
         }
     }
-    
+
     private func toggleIMU() {
         isWalking.toggle()
-        
+
         if isWalking {
             startIMU()
         } else {
@@ -103,10 +134,19 @@ struct AccelMagFFTView: View {
             print("No gait data to export.")
         }
     }
-    
+
     private func stopIMU() {
         motionManager.stopDeviceMotionUpdates()
         accelMagFFT.analyzeSteps() // Automatically analyze after stopping
+        
+        DispatchQueue.main.async {
+            self.isWalking = false
+            self.accelMagFFT.stepCount = self.accelMagFFT.detectedSteps.count
+            self.accelMagFFT.avgStepLength = self.accelMagFFT.avgStepLength
+            self.accelMagFFT.stepVariance = self.accelMagFFT.stepVariance
+            self.accelMagFFT.accuracy = self.accelMagFFT.accuracy
+            self.accelMagFFT.recommendation = self.accelMagFFT.recommendation
+        }
     }
 }
 
