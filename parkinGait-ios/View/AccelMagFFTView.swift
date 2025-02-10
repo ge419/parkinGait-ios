@@ -43,6 +43,15 @@ struct AccelMagFFTView: View {
                 .frame(height: 200)
                 .padding()
             }
+            Button(action: exportGaitData) {
+                Text("Export Data")
+                    .font(.title2)
+                    .padding()
+                    .background(Color.blue)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+            }
+            .padding(.top, 20)
         }
     }
     

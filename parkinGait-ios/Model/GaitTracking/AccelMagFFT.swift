@@ -13,8 +13,8 @@ import simd
 class AccelMagFFT {
     private let METERS_TO_INCHES: Float = 39.3701
     private let ACCEL_THRESHOLD: Float = 10.0
-    private let MIN_DELTA_TIME: TimeInterval = 0.5  // Minimum step duration (seconds)
-    private let MAX_DELTA_TIME: TimeInterval = 2.0  // Maximum step duration (seconds)
+    private let MIN_DELTA_TIME: Float = 0.5  // Minimum step duration (seconds)
+    private let MAX_DELTA_TIME: Float = 2.0  // Maximum step duration (seconds)
     private let TARGET_STEP_LENGTH: Double = 30.0  // Target step length in inches
     private let CUTOFF_FREQUENCY: Float = 2.0  // Hz (Step frequency typically 1-3 Hz)
     private let SAMPLING_RATE: Float = 10.0  // Hz
@@ -28,6 +28,14 @@ class AccelMagFFT {
     @Published var stepVariance: Double = 0.0
     @Published var accuracy: Double = 0.0  // Accuracy compared to TARGET_STEP_LENGTH
     @Published var recommendation: String = "Start Walking to See Analysis"
+    
+    private var cumulativeVelocity: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+    private var cumulativePosition: SIMD3<Float> = SIMD3<Float>(0, 0, 0)
+    private var lastTimestamp: TimeInterval?
+    
+    private var velIntegral = Integral()
+    private var posIntegral = Integral()
+    private var dt = DeltaTime()
 
     private var collectedData: [AccelFFTRecord] = []
     private var fftSetup: vDSP_DFT_Setup?
@@ -64,7 +72,7 @@ class AccelMagFFT {
             gyroX: Double(gyro.x),
             gyroY: Double(gyro.y),
             gyroZ: Double(gyro.z),
-            filteredAccelMagnitude: nil, // Will be computed later
+            filteredAccelMagnitude: nil,
             stepDetected: false,
             stepLength: nil
         )
@@ -104,29 +112,44 @@ class AccelMagFFT {
             return data
         }
 
-        var realParts = data
-        var imaginaryParts = [Float](repeating: 0.0, count: data.count)
+        var filteredData = data // Copy to store filtered values
+        let stepSize = WINDOW_SIZE / 2  // 50% overlapping window
 
-        realParts.withUnsafeMutableBufferPointer { realPointer in
-            imaginaryParts.withUnsafeMutableBufferPointer { imagPointer in
-                vDSP_DFT_Execute(fftSetup, realPointer.baseAddress!, imagPointer.baseAddress!,
-                                 realPointer.baseAddress!, imagPointer.baseAddress!)
+        for i in stride(from: 0, to: data.count - WINDOW_SIZE, by: stepSize) {
+            // Extract windowed segment
+            var realParts = Array(data[i..<i + WINDOW_SIZE])
+            var imaginaryParts = [Float](repeating: 0.0, count: WINDOW_SIZE)
+
+            var realOutput = realParts
+            var imaginaryOutput = imaginaryParts
+
+            // Compute FFT (Use separate input/output buffers)
+            vDSP_DFT_Execute(fftSetup, realParts, imaginaryParts, &realOutput, &imaginaryOutput)
+
+            // Compute frequency bins
+            let frequencies = (0..<WINDOW_SIZE).map { Float($0) * SAMPLING_RATE / Float(WINDOW_SIZE) }
+
+            // Apply low-pass filter by zeroing out high frequencies
+            for j in 0..<WINDOW_SIZE {
+                if frequencies[j] > CUTOFF_FREQUENCY {
+                    realOutput[j] = 0.0
+                    imaginaryOutput[j] = 0.0
+                }
+            }
+
+            // Inverse FFT (Again, use separate buffers)
+            vDSP_DFT_Execute(fftSetup, realOutput, imaginaryOutput, &realParts, &imaginaryParts)
+
+            // Apply inverse scaling to match Python output
+            let scaleFactor = 1.0 / Float(WINDOW_SIZE)
+            for j in 0..<WINDOW_SIZE {
+                filteredData[i + j] = realParts[j] * scaleFactor
             }
         }
 
-        let frequencies = (0..<data.count).map { Float($0) * SAMPLING_RATE / Float(data.count) }
-        for i in 0..<data.count {
-            if frequencies[i] > CUTOFF_FREQUENCY {
-                realParts[i] = 0.0
-                imaginaryParts[i] = 0.0
-            }
-        }
-
-        vDSP_DFT_Execute(fftSetup, realParts, imaginaryParts, &realParts, &imaginaryParts)
-        return realParts
+        return filteredData
     }
 
-    /// **Detect Steps using Positive/Negative Spark Detection**
     private func detectSteps() {
         var detectedStepsTemp: [AccelFFTRecord] = []
 
@@ -137,16 +160,28 @@ class AccelMagFFT {
             if accelMag > Double(ACCEL_THRESHOLD), !positiveSparkDetected {
                 positiveSparkDetected = true
                 stepStartTime = collectedData[i].timestamp
+                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+                cumulativePosition = SIMD3<Float>(0, 0, 0)
             }
             // **Negative Spark Detection (Step End)**
             else if accelMag < Double(ACCEL_THRESHOLD), positiveSparkDetected {
                 positiveSparkDetected = false
 
                 if let startTime = stepStartTime {
-                    let deltaTime = collectedData[i].timestamp - startTime
+                    let deltaTime = Float(collectedData[i].timestamp - startTime)
 
                     if MIN_DELTA_TIME <= deltaTime && deltaTime <= MAX_DELTA_TIME {
-                        let stepLength = Double(abs(accelMag - (collectedData[i - 1].filteredAccelMagnitude ?? collectedData[i - 1].accelMagnitude))) * Double(METERS_TO_INCHES)
+                        let accelVec = SIMD3<Float>(
+                            Float(collectedData[i].accelX),
+                            Float(collectedData[i].accelY),
+                            Float(collectedData[i].accelZ)
+                        )
+
+                        cumulativeVelocity = velIntegral.step(v: accelVec, dt: deltaTime)
+
+                        cumulativePosition = posIntegral.step(v: cumulativeVelocity, dt: deltaTime)
+
+                        let stepLength = Double(length(cumulativePosition))
 
                         collectedData[i].stepDetected = true
                         collectedData[i].stepLength = stepLength
@@ -154,6 +189,9 @@ class AccelMagFFT {
                     }
                     stepStartTime = nil
                 }
+
+                cumulativeVelocity = SIMD3<Float>(0, 0, 0)
+                cumulativePosition = SIMD3<Float>(0, 0, 0)
             }
         }
 
