@@ -14,6 +14,12 @@ struct AccelMagFFTView: View {
     private var accelMagFFT = AccelMagFFT()
     @State private var isWalking = false
     private var motionManager = CMMotionManager()
+    
+    @State private var stepCount: Int = 0
+    @State private var avgStepLength: Double = 0.0
+    @State private var stepVariance: Double = 0.0
+    @State private var accuracy: Double = 0.0
+    @State private var recommendation: String = "Start Walking to See Analysis"
 
     var body: some View {
         VStack {
@@ -24,14 +30,15 @@ struct AccelMagFFTView: View {
                     .foregroundColor(.blue)
                     .padding(.top)
 
-                Text("Total Steps: \(accelMagFFT.stepCount)")
-                Text("Avg Step Length: \(String(format: "%.2f", accelMagFFT.avgStepLength)) inches")
-                Text("Step Variance: \(String(format: "%.2f", accelMagFFT.stepVariance)) inches²")
-                Text("Accuracy: \(String(format: "%.1f", accelMagFFT.accuracy))%")
-                Text(accelMagFFT.recommendation)
+//                Text("Total Steps: \(stepCount)")
+                Text("Avg Step Length: \(String(format: "%.2f", avgStepLength)) inches")
+                Text("Step Variance: \(String(format: "%.2f", stepVariance)) inches²")
+                Text("Accuracy: \(String(format: "%.1f", accuracy))%")
+                Text(recommendation)
                     .foregroundColor(.red)
             }
             .padding()
+
 
             // **Start/Stop Tracking Button**
             Button(action: toggleIMU) {
@@ -141,11 +148,11 @@ struct AccelMagFFTView: View {
         
         DispatchQueue.main.async {
             self.isWalking = false
-            self.accelMagFFT.stepCount = self.accelMagFFT.detectedSteps.count
-            self.accelMagFFT.avgStepLength = self.accelMagFFT.avgStepLength
-            self.accelMagFFT.stepVariance = self.accelMagFFT.stepVariance
-            self.accelMagFFT.accuracy = self.accelMagFFT.accuracy
-            self.accelMagFFT.recommendation = self.accelMagFFT.recommendation
+            self.stepCount = self.accelMagFFT.detectedSteps.count
+            self.avgStepLength = self.accelMagFFT.avgStepLength
+            self.stepVariance = self.accelMagFFT.stepVariance
+            self.accuracy = self.accelMagFFT.accuracy
+            self.recommendation = self.accelMagFFT.recommendation
         }
     }
 }
