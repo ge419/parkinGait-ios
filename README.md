@@ -16,12 +16,12 @@ parkinGait is an iOS application designed to monitor and analyze gait patterns f
 
 ## **Core Components**
 ### **Gait Tracking Models**
-1.**Step Length Calculator**: Calculates step length using device IMU sensors.
+1.**Step Length Calculator**: Calculates step length using device IMU sensors. (Algorithm 3.2)
 2. **Step Counter**: Tracks steps and distance using peak detection on accelerometer data.
 3. **Step Length with Height**: Calculates step length by factoring in user height and stride frequency.
-4. **DynamicStepCounter**: Detects step length using dynamic threshold. (INCOMPLETE; Do not proceed with this algorithm)
-5. **Acceleration Magnitude**: Calculates step length using acceleration magnitude and double integration.
-6. **Acceleration Magnitude FFT**: Applies Fast Fourier Transformation to the previous algorithm.
+4. **DynamicStepCounter**: Detects step length using dynamic threshold. (INCOMPLETE; Do not proceed with this algorithm) (Some of algorithm 3.1)
+5. **Acceleration Magnitude**: Calculates step length using acceleration magnitude and double integration. (Algorithm 3.3)
+6. **Acceleration Magnitude FFT**: Applies Fast Fourier Transformation to the previous algorithm. (Algorithm 3.4)
 
 ### **Data Export**
 - Export gait data (timestamp, accelerometer, gyroscope, step length, etc.) to a CSV file.
@@ -81,11 +81,10 @@ This section discusses the variables that affect step length calculation. There 
 - **Testing conditions**: There should be a set testing condition to test different algorithms. Testing the same algorithm on different people could produce drastically different results. Synchronize the testing conditions and instructions to ensure consistent testing results.
 
 
-
 ## 3. Algorithms
 
-### 3.1 Gait Constant and Dynamic Thresholding (React)
-This algorithm utilizes acceleration data to detect peaks, and estimates step length using a gait constant. It was originally implemented in React (Expo), and was converted to Swift and Kotlin to develop native application for each platform.
+### 3.1 Gait Constant and Dynamic Thresholding (React and some in iOS)
+This algorithm utilizes acceleration data to detect peaks, and estimates step length using a gait constant. It was originally implemented in React (Expo), and was converted to Swift and Kotlin to develop native application for each platform. Prof. Younes will have a link to this repository.
 
 #### 3.1.1 Step Detection Mechanism
 - Calibration to calcualte the gait constant of the user. This information is stored in the database for future use. Can be recalibrated and updated if needed.
@@ -133,7 +132,7 @@ This shows that gait constant is essentially an estimate of the user's walking s
 - Test Results: There was no test results provided by the developer of this algorithm. Tests were conducted according to instructions given, but were not successful. Assuming the phone was hand-held near waist and I let the phone move vertically as I walked, the test results for this algorithm show that there is constant trend in step length esitmates, but were not necessarily accurate. In my case, the expected step length was 30 inches, but the detected step lengths were around 18-24 inches. Testing with the phone in pockets were not successful at all.
 
 ### 3.2 Device Attached to Ankle (iOS)
-This Swift implementation of step length estimation is based on Zero Velocity Updates (ZVU) and sensor fusion using IMU data (accelerometer, gyroscope, and quaternion-based gravity compensation)**. The algorithm was adapted from a previous C++ (Arduino) implementation and optimized for iOS. See [here](https://github.com/mayarim/Park_PTD) for more details.
+This Swift implementation of step length estimation is based on Zero Velocity Updates (ZVU) and sensor fusion using IMU data (accelerometer, gyroscope, and quaternion-based gravity compensation)**. The algorithm was adapted from a previous C++ (Arduino) implementation and optimized for iOS. See [here](https://github.com/mayarim/Park_PTD) for more details. Corresponds to **Step Length Calculator** in iOS application.
 
 #### 3.2.1 IMU Initialization and Data Processing
 - Uses `CoreMotion` to collect accelerometer, gyroscope, and orientation quaternion data.
@@ -159,13 +158,14 @@ This Swift implementation of step length estimation is based on Zero Velocity Up
 #### 3.2.4 Limitations
 - Integration-based step length is prone to drift: Small sensor noise accumulates over time, leading to inaccurate distance estimation. Since this algorithm relies entirely on integration to calculate step length, the test results have high variance.
 - Too much fixed variables to consider: Migrating from a custom-made device to a smartphone caused problems since the fixed values used in the original algorithm did not work with the iOS application. For example, threshold values for distance, acceleration, and gyroscope had to be adjusted. There was no specific trend in step length calculation when multiple different values were used for thresholds. ZVU also requires threshold values that need adjustment.
-- Test results:
 
 #### 3.2.5 Suggestion
-- Test the previous team's algorithm with their device.
+- Test the previous team's algorithm with their device and compare the results.
+- The previous team used a filter called AHRS filter, which was not implemented for this algorithm. Creating a separate library/package and testing AHRS filter for iOS devices may help improve step length calculation results.
+- Test results: proved to be effective in terms of step detection when user takes a relatively slow step, but moving their foot fast when walking. This behavior maximizes the difference in acceleration magnitude between when a foot is stable on gound waiting for the other foot to move and when a foot is moving airborne to take a step. Such movement suits well with the design of this algorithm that uses fixed threshold for step detection.
 
 ### 3.3 Acceleration Magnitude
-This algorithm detects steps and estimates step length by analyzing the magnitude of acceleration and using a positive-negative acceleration spark detection method. It leverages integral-based motion tracking and gravity compensation while storing motion data for further analysis. Unlike previous implementations, it explicitly tracks step timing and applies low-pass filtering for smoother acceleration signals.
+This algorithm detects steps and estimates step length by analyzing the magnitude of acceleration and using a positive-negative acceleration spark detection method. It leverages integral-based motion tracking and gravity compensation while storing motion data for further analysis. Unlike previous implementations, it explicitly tracks step timing and applies low-pass filtering for smoother acceleration signals. Corresponds to **Acceleration Magnitude** in the application.
 
 #### 3.3.1 Step Detection and Step Length Calculation
 - The algorithm first extracts gravity components from the quaternion orientation to remove static gravity effects from raw acceleration data.
@@ -187,7 +187,7 @@ This algorithm detects steps and estimates step length by analyzing the magnitud
 - The use of static values such as acceleration magnitude threshold and min/max step time thresholds, could neglect variance between different users. This results in lower accuracy of the calculated step lengths.
 
 ### 3.4 Acceleration Magnitude with Fast Fourier Transformation
-This algorithm introduces Fast Fourier Transform (FFT) filtering to improve step detection and step length estimation by removing high-frequency noise from acceleration data. It employs spark-based step detection (positive and negative acceleration peaks) and statistical feedback on step accuracy compared to a target step length. This is the only algorithm that does not provide real-time feedback.
+This algorithm introduces Fast Fourier Transform (FFT) filtering to improve step detection and step length estimation by removing high-frequency noise from acceleration data. It employs spark-based step detection (positive and negative acceleration peaks) and statistical feedback on step accuracy compared to a target step length. This is the only algorithm that does not provide real-time feedback. Corresponds to **Acceleration Magnitude FFT** in application.
 
 #### 3.4.1 Step Detection and Step Length Calculation
 - The algorithm continuously collects acceleration and gyroscope data.
@@ -209,7 +209,20 @@ This algorithm introduces Fast Fourier Transform (FFT) filtering to improve step
 #### 3.4.3 Limitations
 - Since FFT is applied after all data has been collected, real-time analysis is not possible for this algorithm. It is possible to implement real-time FFT, but could lead to latency since FFT requires a set window size (number of samples). 
 - Similar to Algorithm 3.3, threshold-based step detection might miss subtle movements. The `ACCEL_THRESHOLD` of 10.0 is static, meaning slow or shuffling steps may be missed, or very forceful steps might be detected multiple times.
-- Any output to the user is possible only after all steps have been taken. 
+- Any output to the user is possible only after all steps have been taken.
+- This algorithm outputs different results on same walking patterns based on testing conditions, as well as same testing conditions but diffrerent walking patterns. This is because the step detection based on fixed threshold causes discrepancies between actual steps taken and steps determined by the algorithm. With fixed threshold, there are cases where the user takes a step but the acceleration magnitude never goes below the threshold. This makes it impossible to detect some steps (especially fast steps or shuffling) but have been proved to work well with relatively slow steps. The accuracy of this step detection algorithm is also determiend by other factors such as how tight the phone is strapped to the ankle (if it's loosely strapped, there will be constant movement to the phone at all times regardless of steps, resulting the acceleration magnitude to be above the fixed threshold at all times), whether the user is wearing shoes (this affects the acceleration magnitude since the impact of the user's feet to the ground is different when wearing shoes or not), the hardness of the floor/terrain (indoors/outdoors too; impact of the user's feet to the ground has effect on acceleration magnitude), etc.
+
+#### 3.4.4 Testing Conditions
+This algorithm was mainly tested in the following testing conditions:
+- Tested indoors, with carpeted floor
+- Phone was facing upwards, parallel to the shin. It was placed inside a sock right next to the ankle.
+- The tester did not have shoes on, and walked normal speed. The tester's height was 5'11'', with average step length of 30 inches.
+- Test results under this condition were around 20-25 inches when 30 inches were expected.
+- When tested indoors, carpeted floor, and shoes on, the test results were around 8-10 inches when 30 inches were expected
+
+#### 3.4.5 Suggestions
+- To resolve the issues mentioned in the limitations section, follow the instructions in the suggestions section below.
+- Calibrating user's normal walking speed, calibrating users' threshold for step detection, and keeping this threshold dynamic to adapt to different environments are the key to resolving the limitations mentioned for this algorithm. More on this is dealt in the section below.
 
 ## 4. Suggestions
 Here's the roadmap for further improving this project.
